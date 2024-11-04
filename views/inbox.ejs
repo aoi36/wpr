@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inbox</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div class="user-info">
+            <span><%= user.full_name %></span>
+            <a href="/logout">Sign out</a>
+        </div>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="/compose">Compose</a></li>
+            <li><a href="/inbox">Inbox</a></li>
+            <li><a href="/outbox">Outbox</a></li>
+        </ul>
+    </nav>
+    <main>
+        <h1>Inbox</h1>
+        <div class="email-actions">
+            <button id="deleteButton" disabled>Delete Selected</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>Sender</th>
+                    <th>Subject</th>
+                    <th>Received</th>
+                </tr>
+            </thead>
+            <tbody id="emailList">
+                <% emails.forEach(email => { %>
+                    <tr data-email-id="<%= email.id %>">
+                        <td><input type="checkbox" class="emailCheckbox" data-email-id="<%= email.id %>"></td>
+                        <td><%= email.sender_name %></td>
+                        <td><a href="/email/<%= email.id %>"><%= email.subject || '(no subject)' %></a></td>
+                        <td><%= new Date(email.sent_at).toLocaleString() %></td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <div class="pagination">
+            <% if (currentPage > 1) { %>
+                <a href="/inbox?page=<%= currentPage - 1 %>">Previous</a>
+            <% } %>
+            <% for (let i = 1; i <= totalPages; i++) { %>
+                <% if (i === currentPage) { %>
+                    <span class="current"><%= i %></span>
+                <% } else { %>
+                    <a href="/inbox?page=<%= i %>"><%= i %></a>
+                <% } %>
+            <% } %>
+            <% if (currentPage < totalPages) { %>
+                <a href="/inbox?page=<%= currentPage + 1 %>">Next</a>
+            <% } %>
+        </div>
+    </main>
+    <script src="/js/email-actions.js"></script>
+</body>
+</html>

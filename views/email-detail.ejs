@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Detail</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div class="user-info">
+            <span><%= user.full_name %></span>
+            <a href="/logout">Sign out</a>
+        </div>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="/compose">Compose</a></li>
+            <li><a href="/inbox">Inbox</a></li>
+            <li><a href="/outbox">Outbox</a></li>
+        </ul>
+    </nav>
+    <main>
+        <h1><%= email.subject || '(no subject)' %></h1>
+        <p><strong>From:</strong> <%= email.sender_name %></p>
+        <p><strong>To:</strong> <%= email.recipient_name %></p>
+        <p><strong>Sent:</strong> <%= new Date(email.sent_at).toLocaleString() %></p>
+        <hr>
+        <div class="email-body">
+            <%= email.body %>
+        </div>
+        <% if (email.attachment) { %>
+            <p><strong>Attachment:</strong> <a href="/uploads/<%= email.attachment %>" download>Download</a></p>
+        <% } %>
+    </main>
+</body>
+</html>

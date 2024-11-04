@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div  class="user-info">
+            <span><%= user.full_name %></span>
+            <a href="/logout">Sign out</a>
+        </div>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="/compose">Compose</a></li>
+            <li><a href="/inbox">Inbox</a></li>
+            <li><a href="/outbox">Outbox</a></li>
+        </ul>
+    </nav>
+    <main>
+        <%- body %>
+    </main>
+</body>
+</html>

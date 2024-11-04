@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compose Email</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div class="user-info">
+            <span><%= user.full_name %></span>
+            <a href="/logout">Sign out</a>
+        </div>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="/compose">Compose</a></li>
+            <li><a href="/inbox">Inbox</a></li>
+            <li><a href="/outbox">Outbox</a></li>
+        </ul>
+    </nav>
+    <main>
+        <h1>Compose Email</h1>
+        <% if (locals.error) { %>
+            <p class="error"><%= error %></p>
+        <% } %>
+        <form action="/compose" method="POST" enctype="multipart/form-data">
+            <select name="recipient" required>
+                <option value="">Select Recipient</option>
+                <% recipients.forEach(recipient => { %>
+                    <option value="<%= recipient.id %>"><%= recipient.full_name %> (<%= recipient.email %>)</option>
+                <% }) %>
+            </select>
+            <input type="text" name="subject" placeholder="Subject">
+            <textarea name="body" placeholder="Email body"></textarea>
+            <input type="file" name="attachment">
+            <button type="submit">Send</button>
+        </form>
+    </main>
+</body>
+</html>
