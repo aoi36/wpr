@@ -32,6 +32,10 @@ initializeDatabase();
 // Middleware to check if user is authenticated
 const isAuthenticated = async (req, res, next) => {
   const userId = req.cookies.userId;
+  const paramsUserId = req.params.userId;
+  const paramsEmailId = req.params.id;
+  console.log(userId + paramsUserId)
+  if(paramsUserId || paramsEmailId){
   if (userId) {
     try {
       const [user] = await connection.query('SELECT * FROM users WHERE id = ?', [userId]);
@@ -44,7 +48,10 @@ const isAuthenticated = async (req, res, next) => {
     }
   }
   res.status(403).render('denied-page');
-};
+}
+  res.status(403).render('denied-page');
+;
+}
 
 // Homepage (Sign-in page)
 app.get('/', async (req, res) => {
@@ -194,6 +201,7 @@ app.get('/compose/:userId', isAuthenticated, async (req, res) => {
 
 // Handle email composition
 app.post('/compose/:userId', isAuthenticated, upload.single('attachment'), async (req, res) => {
+  console.log(req.user)
   const { recipient, subject, body } = req.body;
   const attachment = req.file ? req.file.filename : null;
   try {
@@ -207,9 +215,9 @@ app.post('/compose/:userId', isAuthenticated, upload.single('attachment'), async
  
     await connection.query(
       'INSERT INTO emails (sender_id, recipient_id, subject, body, attachment) VALUES (?, ?, ?, ?, ?)',
-      [req.user.id, recipient, subject || '(no subject)', body, attachment]
+      [req.user.id, receiver[0].id, subject || '(no subject)', body, attachment]
     );
-    res.redirect('/outbox');
+    res.redirect('/outbox/' + req.params.userId);
   } catch (error) {
     console.error('Email sending error:', error);
     res.status(500).send('An error occurred while sending the email');
@@ -217,7 +225,7 @@ app.post('/compose/:userId', isAuthenticated, upload.single('attachment'), async
 });
 
 // Email detail page
-app.get('/email/:id', isAuthenticated, async (req, res) => {
+app.get('/:userId/email/:id', isAuthenticated, async (req, res) => {
   try {
     const [email] = await connection.query(
       `SELECT e.*, 
@@ -247,101 +255,9 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
-app.post('/delete-emails', isAuthenticated, async (req, res) => {
-  const { emailIds } = req.body;
-  const userId = req.user.id;
 
-  try {
-    // Update the emails table to mark emails as deleted for the current user
-    await connection.query(
-      `UPDATE emails SET 
-       deleted_by_sender = CASE WHEN sender_id = ? THEN 1 ELSE deleted_by_sender END,
-       deleted_by_recipient = CASE WHEN recipient_id = ? THEN 1 ELSE deleted_by_recipient END
-       WHERE id IN (?)`,
-      [userId, userId, emailIds]
-    );
-
-    res.json({ success: true, message: 'Emails deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting emails:', error);
-    res.status(500).json({ success: false, message: 'An error occurred while deleting emails' });
-  }
-});
-
-// Update the inbox route to exclude deleted emails
-app.get('/inbox', isAuthenticated, async (req, res) => {
-  const currentPage = parseInt(req.query.page) || 1;
-  const limit = 5;
-  const offset = (currentPage - 1) * limit;
-
-  try {
-    const [emails] = await connection.query(
-      `SELECT e.*, u.full_name AS sender_name 
-       FROM emails e 
-       JOIN users u ON e.sender_id = u.id 
-       WHERE e.recipient_id = ? AND e.deleted_by_recipient = 0
-       ORDER BY e.sent_at DESC 
-       LIMIT ? OFFSET ?`,
-      [req.user.id, limit, offset]
-    );
-
-    const [totalEmails] = await connection.query(
-      'SELECT COUNT(*) as count FROM emails WHERE recipient_id = ? AND deleted_by_recipient = 0',
-      [req.user.id]
-    );
-
-    const totalPages = Math.ceil(totalEmails[0].count / limit);
-
-    res.render('inbox', {
-      user: req.user,
-      emails,
-      currentPage: currentPage,
-      totalPages
-    });
-  } catch (error) {
-    console.error('Inbox error:', error);
-    res.status(500).send('An error occurred while fetching emails');
-  }
-});
-
-// Update the outbox route to exclude deleted emails
-app.get('/outbox', isAuthenticated, async (req, res) => {
-  const currentPage = parseInt(req.query.page) || 1;
-  const limit = 5;
-  const offset = (currentPage - 1) * limit;
-
-  try {
-    const [emails] = await connection.query(
-      `SELECT e.*, u.full_name AS recipient_name 
-       FROM emails e 
-       JOIN users u ON e.recipient_id = u.id 
-       WHERE e.sender_id = ? AND e.deleted_by_sender = 0
-       ORDER BY e.sent_at DESC 
-       LIMIT ? OFFSET ?`,
-      [req.user.id, limit, offset]
-    );
-
-    const [totalEmails] = await connection.query(
-      'SELECT COUNT(*) as count FROM emails WHERE sender_id = ? AND deleted_by_sender = 0',
-      [req.user.id]
-    );
-
-    const totalPages = Math.ceil(totalEmails[0].count / limit);
-
-    res.render('outbox', {
-      user: req.user,
-      emails,
-      currentPage: currentPage,
-      totalPages
-    });
-  } catch (error) {
-    console.error('Outbox error:', error);
-    res.status(500).send('An error occurred while fetching emails');
-  }
-});
 
 // Start server
 app.listen(8000, () => {
   console.log('Server running on http://localhost:8000');
- 
 });
