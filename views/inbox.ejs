@@ -15,9 +15,9 @@
     </header>
     <nav>
         <ul>
-            <li><a href="/compose">Compose</a></li>
-            <li><a href="/inbox">Inbox</a></li>
-            <li><a href="/outbox">Outbox</a></li>
+            <li><a href="/compose/<%= user.id %>">Compose</a></li>
+            <li><a href="/inbox/<%= user.id %>">Inbox</a></li>
+            <li><a href="/outbox/<%= user.id %>">Outbox</a></li>
         </ul>
     </nav>
     <main>
@@ -38,7 +38,7 @@
                 <% emails.forEach(email => { %>
                     <tr data-email-id="<%= email.id %>">
                         <td><input type="checkbox" class="emailCheckbox" data-email-id="<%= email.id %>"></td>
-                        <td><%= email.sender_name %></td>
+                        <td><%= email.full_name %></td>
                         <td><a href="/email/<%= email.id %>"><%= email.subject || '(no subject)' %></a></td>
                         <td><%= new Date(email.sent_at).toLocaleString() %></td>
                     </tr>
