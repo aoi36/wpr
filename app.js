@@ -35,7 +35,7 @@ const isAuthenticated = async (req, res, next) => {
   if (userId) {
     try {
       const [user] = await connection.query('SELECT * FROM users WHERE id = ?', [userId]);
-      if (user.length > 0) {
+      if (user.length !== 0) {
         req.user = user[0];
         return next();
       }
@@ -43,14 +43,14 @@ const isAuthenticated = async (req, res, next) => {
       console.error('Authentication error:', error);
     }
   }
-  res.redirect('/');
+  res.status(403).render('denied-page');
 };
 
 // Homepage (Sign-in page)
 app.get('/', async (req, res) => {
   const userId = req.cookies.userId;
   if (userId) {
-    return res.redirect('/inbox');
+    return res.redirect('/inbox/' + userId);
   }
   res.render('sign-in', { error: null });
 });
@@ -60,9 +60,10 @@ app.post('/', async (req, res) => {
   const { email, password } = req.body;
   try {
     const [user] = await connection.query('SELECT * FROM users WHERE email = ? AND password = ?', [email, password]);
-    if (user.length > 0) {
-      res.cookie('userId', user[0].id, { httpOnly: true });
-      return res.redirect('/inbox');
+    if (user.length != 0) {
+      
+      res.cookie('userId', user[0].id);
+      return res.redirect('/inbox/' + user[0].id);
     } else {
       res.render('sign-in', { error: 'Invalid email or password' });
     }
@@ -108,25 +109,26 @@ app.post('/sign-up', async (req, res) => {
 });
 
 // Inbox page
-app.get('/inbox', isAuthenticated, async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
+app.get('/inbox/:userId', isAuthenticated, async (req, res) => {
+  const currentPage = parseInt(req.query.page) || 1;
   const limit = 5;
-  const offset = (page - 1) * limit;
+  const offset = (currentPage - 1) * limit;
 
   try {
     const [emails] = await connection.query(
-      `SELECT e.*, u.full_name AS sender_name 
+      `SELECT e.*, u.full_name  
        FROM emails e 
        JOIN users u ON e.sender_id = u.id 
        WHERE e.recipient_id = ? 
        ORDER BY e.sent_at DESC 
        LIMIT ? OFFSET ?`,
-      [req.user.id, limit, offset]
+      [req.params.userId, limit, offset]
     );
+    
 
     const [totalEmails] = await connection.query(
       'SELECT COUNT(*) as count FROM emails WHERE recipient_id = ?',
-      [req.user.id]
+      [req.params.userId]
     );
 
     const totalPages = Math.ceil(totalEmails[0].count / limit);
@@ -134,7 +136,7 @@ app.get('/inbox', isAuthenticated, async (req, res) => {
     res.render('inbox', {
       user: req.user,
       emails,
-      currentPage: page,
+      currentPage: currentPage,
       totalPages
     });
   } catch (error) {
@@ -144,25 +146,25 @@ app.get('/inbox', isAuthenticated, async (req, res) => {
 });
 
 // Outbox page
-app.get('/outbox', isAuthenticated, async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
+app.get('/outbox/:userId', isAuthenticated, async (req, res) => {
+  const currentPage = parseInt(req.query.page) || 1;
   const limit = 5;
-  const offset = (page - 1) * limit;
+  const offset = (currentPage - 1) * limit;
 
   try {
     const [emails] = await connection.query(
-      `SELECT e.*, u.full_name AS recipient_name 
+      `SELECT e.*, u.full_name 
        FROM emails e 
        JOIN users u ON e.recipient_id = u.id 
        WHERE e.sender_id = ? 
        ORDER BY e.sent_at DESC 
        LIMIT ? OFFSET ?`,
-      [req.user.id, limit, offset]
+      [req.params.userId, limit, offset]
     );
 
     const [totalEmails] = await connection.query(
       'SELECT COUNT(*) as count FROM emails WHERE sender_id = ?',
-      [req.user.id]
+      [req.params.userId]
     );
 
     const totalPages = Math.ceil(totalEmails[0].count / limit);
@@ -170,7 +172,7 @@ app.get('/outbox', isAuthenticated, async (req, res) => {
     res.render('outbox', {
       user: req.user,
       emails,
-      currentPage: page,
+      currentPage: currentPage,
       totalPages
     });
   } catch (error) {
@@ -180,7 +182,7 @@ app.get('/outbox', isAuthenticated, async (req, res) => {
 });
 
 // Compose page
-app.get('/compose', isAuthenticated, async (req, res) => {
+app.get('/compose/:userId', isAuthenticated, async (req, res) => {
   try {
     const [users] = await connection.query('SELECT id, full_name, email FROM users WHERE id != ?', [req.user.id]);
     res.render('compose', { user: req.user, recipients: users, error: null });
@@ -191,20 +193,18 @@ app.get('/compose', isAuthenticated, async (req, res) => {
 });
 
 // Handle email composition
-app.post('/compose', isAuthenticated, upload.single('attachment'), async (req, res) => {
+app.post('/compose/:userId', isAuthenticated, upload.single('attachment'), async (req, res) => {
   const { recipient, subject, body } = req.body;
   const attachment = req.file ? req.file.filename : null;
-
-  if (!recipient) {
-    const [users] = await connection.query('SELECT id, full_name, email FROM users WHERE id != ?', [req.user.id]);
-    return res.render('compose', {
-      user: req.user,
-      recipients: users,
-      error: 'Please select a recipient'
-    });
-  }
-
   try {
+    const [receiver] = await  connection.query('SELECT id FROM users WHERE email = ?', [recipient]);
+    if (receiver. length === 0){
+      return res.render('compose', {
+        user: req.user,
+        error: 'Please enter an existed recipient'
+      });
+    }
+ 
     await connection.query(
       'INSERT INTO emails (sender_id, recipient_id, subject, body, attachment) VALUES (?, ?, ?, ?, ?)',
       [req.user.id, recipient, subject || '(no subject)', body, attachment]
@@ -246,6 +246,7 @@ app.get('/logout', (req, res) => {
   res.clearCookie('userId');
   res.redirect('/');
 });
+
 app.post('/delete-emails', isAuthenticated, async (req, res) => {
   const { emailIds } = req.body;
   const userId = req.user.id;
@@ -269,9 +270,9 @@ app.post('/delete-emails', isAuthenticated, async (req, res) => {
 
 // Update the inbox route to exclude deleted emails
 app.get('/inbox', isAuthenticated, async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
+  const currentPage = parseInt(req.query.page) || 1;
   const limit = 5;
-  const offset = (page - 1) * limit;
+  const offset = (currentPage - 1) * limit;
 
   try {
     const [emails] = await connection.query(
@@ -294,7 +295,7 @@ app.get('/inbox', isAuthenticated, async (req, res) => {
     res.render('inbox', {
       user: req.user,
       emails,
-      currentPage: page,
+      currentPage: currentPage,
       totalPages
     });
   } catch (error) {
@@ -305,9 +306,9 @@ app.get('/inbox', isAuthenticated, async (req, res) => {
 
 // Update the outbox route to exclude deleted emails
 app.get('/outbox', isAuthenticated, async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
+  const currentPage = parseInt(req.query.page) || 1;
   const limit = 5;
-  const offset = (page - 1) * limit;
+  const offset = (currentPage - 1) * limit;
 
   try {
     const [emails] = await connection.query(
@@ -330,7 +331,7 @@ app.get('/outbox', isAuthenticated, async (req, res) => {
     res.render('outbox', {
       user: req.user,
       emails,
-      currentPage: page,
+      currentPage: currentPage,
       totalPages
     });
   } catch (error) {
@@ -342,4 +343,5 @@ app.get('/outbox', isAuthenticated, async (req, res) => {
 // Start server
 app.listen(8000, () => {
   console.log('Server running on http://localhost:8000');
+ 
 });
