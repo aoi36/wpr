@@ -15,9 +15,9 @@
     </header>
     <nav>
         <ul>
-            <li><a href="/compose">Compose</a></li>
-            <li><a href="/inbox">Inbox</a></li>
-            <li><a href="/outbox">Outbox</a></li>
+            <li><a href="/compose/<%= user.id %>">Compose</a></li>
+            <li><a href="/inbox/<%= user.id %>">Inbox</a></li>
+            <li><a href="/outbox/<%= user.id %>">Outbox</a></li>
         </ul>
     </nav>
     <main>
@@ -25,18 +25,22 @@
         <% if (locals.error) { %>
             <p class="error"><%= error %></p>
         <% } %>
-        <form action="/compose" method="POST" enctype="multipart/form-data">
-            <select name="recipient" required>
-                <option value="">Select Recipient</option>
-                <% recipients.forEach(recipient => { %>
-                    <option value="<%= recipient.id %>"><%= recipient.full_name %> (<%= recipient.email %>)</option>
-                <% }) %>
-            </select>
-            <input type="text" name="subject" placeholder="Subject">
-            <textarea name="body" placeholder="Email body"></textarea>
-            <input type="file" name="attachment">
+        <form action="/compose/<%= user.id %>" method="POST" enctype="multipart/form-data">
+            <h3>Recipient Email:</h3>
+            <input type="email" id="recipient" name="recipient" required placeholder="Enter recipient's email">
+            
+            <h3>Subject:</h3>
+            <input type="text" id="subject" name="subject" placeholder="Enter subject">
+            
+            <h3>Message:</h3>
+            <textarea id="body" name="body" placeholder="Enter your message"></textarea>
+            
+            <h3>Attachment:</h3>
+            <input type="file" id="attachment" name="attachment">
+            
             <button type="submit">Send</button>
         </form>
     </main>
+    <script src="/js/email-actions.js"></script>
 </body>
 </html>
