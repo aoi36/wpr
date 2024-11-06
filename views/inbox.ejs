@@ -23,7 +23,7 @@
     <main>
         <h1>Inbox</h1>
         <div class="email-actions">
-            <button id="deleteButton" disabled>Delete Selected</button>
+            <button id="deleteButton" >Delete Selected</button>
         </div>
         <table>
             <thead>
@@ -39,7 +39,7 @@
                     <tr data-email-id="<%= email.id %>">
                         <td><input type="checkbox" class="emailCheckbox" data-email-id="<%= email.id %>"></td>
                         <td><%= email.full_name %></td>
-                        <td><a href="/email/<%= email.id %>"><%= email.subject || '(no subject)' %></a></td>
+                        <td><a href="/<%= user.id %>/email/<%= email.id %>"><%= email.subject || '(no subject)' %></a></td>
                         <td><%= new Date(email.sent_at).toLocaleString() %></td>
                     </tr>
                 <% }) %>
@@ -61,6 +61,6 @@
             <% } %>
         </div>
     </main>
-    <script src="/js/email-actions.js"></script>
+    <script src="/email-actions.js"></script>
 </body>
 </html>
